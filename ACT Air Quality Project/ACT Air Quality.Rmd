@@ -1,0 +1,217 @@
+---
+title: "DIDA 325 Final Project"
+output: html_document
+date: "2024-05-03"
+---
+
+
+
+```{r}
+
+# setting up necessary library and csv file
+library(dplyr)
+library(ggplot2)
+setwd("C:/Users/hjc72/OneDrive/Desktop/DIDA325")
+aqm <- read.csv("Air_Quality_Monitoring_Data_20240503.csv")
+
+# renaming columns for consistency
+aqm <- aqm %>% rename(location = Name,
+               date_time = DateTime,
+               date = Date,
+               time = Time,
+               PM10_1hr = PM10.1.hr,
+               PM2.5_1hr = PM2.5.1.hr,
+               AQI_site = AQI_Site
+               )
+
+# removing unnecessary gps column and removing all NA values
+aqm <- aqm %>% select(-2) %>%
+  na.omit()
+
+# new dataframes showing only 2023-2024 (for recent data) and 2019-2020 (to look at data from bushfire season)
+# https://www.statology.org/as-date-function-in-r/
+aqm23_24 <- aqm %>% 
+  mutate(date = as.Date(date, "%d %b %Y")) %>%
+  filter(format(date, "%Y") %in% c("2023", "2024"))
+
+aqm19_20 <- aqm %>% 
+  mutate(date = as.Date(date, "%d %b %Y")) %>%
+  filter(format(date, "%Y") %in% c("2019", "2020"))
+
+# many of the recently inputed time values are not consistent with the "__:__" format and instead have "__:__:__"
+# getting rid of those time values for consistency
+incorrect_time_format <- c("12:00:00", "7:00:00", "18:00:00", "19:00:00", "0:00:00", "8:00:00", "13:00:00", "15:00:00", "20:00:00", "10:00:00", "11:00:00", "3:00:00", "14:00:00", "2:00:00", "23:00:00", "17:00:00", "6:00:00", "22:00:00", "5:00:00", "4:00:00", "21:00:00", "1:00:00", "9:00:00")
+
+aqm23_24 <- aqm23_24 %>%
+  filter(!time %in% incorrect_time_format)
+
+aqm19_20 <- aqm19_20 %>%
+  filter(!time %in% incorrect_time_format)
+```
+
+
+
+```{r}
+# creating bar graph of hourly average aqi during 2023-2024
+avg_aqi_23_24 <- aqm23_24 %>%
+  group_by(time) %>%
+  summarise(avg_aqi = mean(AQI_site, na.rm = TRUE)) %>%
+  ggplot(aes(x = time, y = avg_aqi, fill = avg_aqi)) + 
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "Average AQI",
+       x = "Time",
+       title = "Hourly Average AQI in 2023-2024")
+
+avg_aqi_23_24
+```
+
+
+
+```{r}
+# creating bar graph of hourly average aqi during 2023-2024
+avg_aqi_19_20 <- aqm19_20 %>%
+  group_by(time) %>%
+  summarise(avg_aqi = mean(AQI_site, na.rm = TRUE)) %>%
+  ggplot(aes(x = time, y = avg_aqi, fill = avg_aqi)) + 
+  geom_bar(stat = "identity") +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  labs(y = "Average AQI",
+       x = "Time",
+       title = "Hourly Average AQI in 2019-2020")
+
+avg_aqi_19_20
+```
+
+
+```{r}
+#creating bar graph showing average AQI by location in 2023-2024
+avg_aqi_loc_23_24 <- aqm23_24 %>% 
+  group_by(location) %>%
+  summarise(avg_aqi_loc = mean(AQI_site, na.rm = TRUE)) %>% 
+  ggplot(aes(x = location, y = avg_aqi_loc, fill = avg_aqi_loc)) + 
+  geom_bar(stat = "identity") +
+  labs(y = "Average AQI",
+       x = "Location",
+       title = "Average AQI by Location 2023-2024")
+  
+avg_aqi_loc_23_24
+```
+
+
+
+```{r}
+#creating bar graph showing average AQI by location in 2019-2020
+avg_aqi_loc_19_20 <- aqm19_20 %>% 
+  group_by(location) %>%
+  summarise(avg_aqi_loc = mean(AQI_site, na.rm = TRUE)) %>% 
+  ggplot(aes(x = location, y = avg_aqi_loc, fill = avg_aqi_loc)) + 
+  geom_bar(stat = "identity") +
+  labs(y = "Average AQI",
+       x = "Location",
+       title = "Average AQI by Location 2019-2020")
+  
+avg_aqi_loc_19_20
+```
+
+
+```{r}
+#creating line plot for average aqi over the years
+#having trouble connecting the points on the line plot
+aqm <- aqm %>%
+  mutate(date = as.Date(date, format = "%d %B %Y")) %>%
+  mutate(year = format(date, "%Y"))
+
+avg_aqi_yr <- aqm %>%
+  group_by(year) %>%
+  summarise(avg_aqi = mean(AQI_site, na.rm = TRUE)) %>%
+  ggplot(aes(x = year, y = avg_aqi)) + 
+  geom_point() +
+  labs(x = "Year",
+       y = "Average AQI",
+       title = "Average AQI 2014-2024")
+
+avg_aqi_yr
+```
+
+
+
+```{r}
+#two tables showing major pollutant levels across location and year
+location_table <- aqm %>% 
+  group_by(location) %>%
+  summarise(avg_NO2 = mean(NO2), avg_CO = mean(CO), avg_O3 = mean(O3_8hr), avg_PM10 = mean(PM10), avg_PM2.5 = mean(PM2.5), avg_AQI = mean(AQI_site))
+
+location_table
+
+year_table <- aqm %>% 
+  group_by(year) %>%
+  summarise(avg_NO2 = mean(NO2), avg_CO = mean(CO), avg_O3 = mean(O3_8hr), avg_PM10 = mean(PM10), avg_PM2.5 = mean(PM2.5), avg_AQI = mean(AQI_site))
+
+year_table
+  
+```
+
+
+```{r}
+#created time series to show PM2.5 levels across years
+library(forecast)
+aqm_monthly <- aqm %>%
+  group_by(month = format(date, "%Y-%m")) %>%
+  summarize(avg_pm2.5 = mean(PM2.5, na.rm = TRUE))
+
+aqm_ts <- ts(aqm_monthly$avg_pm2.5, frequency = 12, start = c(min(as.integer(format(aqm$date, "%Y"))), 0))
+
+plot.ts(aqm_ts, main = "PM2.5 Time Series", xlab = "Year", ylab = "PM2.5")
+
+```
+
+
+```{r}
+#created a seasonal plot that shows monthly PM2.5 levels across all years in the data set
+ggseasonplot(aqm_ts) + ylab("PM2.5 Levels") + ggtitle("Seasonal Plot: Monthly PM2.5 Levels 2014-2024")
+```
+
+
+
+```{r}
+
+#training models in order to create a forecase on my time series model
+aqmfit1 <- meanf(aqm_ts)
+aqmfit2 <- rwf(aqm_ts)
+aqmfit3 <- snaive(aqm_ts)
+
+autoplot(aqm_ts) +
+  autolayer(aqmfit1, series = "Mean", PI = FALSE) +
+  autolayer(aqmfit2, series = "Naïve", PI = FALSE) + 
+  autolayer(aqmfit3, series = "Seasonal Naïve", PI = FALSE) +
+  xlab("Year") +
+  ylab("PM2.5") +
+  ggtitle("Forecasts for PM2.5 Levels") +
+  guides(color = guide_legend(title = "Forecasts"))
+
+```
+
+
+```{r}
+library(lubridate)
+
+#https://stackoverflow.com/questions/58704136/filtering-dataset-for-a-specific-date-with-lubridate-and-dplyr
+#https://www.statmethods.net/stats/ttest.html
+
+#results show that p-value is less than a 0.05, suggesting very strong evidence to reject the null hypothesis. 
+
+
+aqm_2014_2018 <- filter(aqm, year(date) %in% c(2014, 2018))
+aqm_other_yrs2 <- filter(aqm, !year(date) %in% c(2020, 2024))
+
+t_test_aqm <- t.test(aqm_2014_2018$AQI_site, aqm_other_yrs2$AQI_site)
+t_test_aqm
+
+p_value <- t_test_aqm$p.value
+p_value
+``` 
+
+
+
+
